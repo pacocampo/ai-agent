@@ -1,0 +1,18 @@
+# Default owners for everything in the repo
+* @paco.ocampo
+
+# Source code
+/src/ @paco.ocampo
+
+# Tests
+/tests/ @paco.ocampo
+
+# Configuration files
+/serverless.yml @paco.ocampo
+/pyproject.toml @paco.ocampo
+/requirements-lambda.txt @paco.ocampo
+
+# Documentation
+/README.md @paco.ocampo
+/ADR.md @paco.ocampo
+

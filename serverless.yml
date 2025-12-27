@@ -1,0 +1,121 @@
+service: kavak-agent
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: python3.12
+  region: ${opt:region, "us-east-1"}
+  stage: ${opt:stage, "dev"}
+  memorySize: 512
+  timeout: 30
+  iam:
+    role:
+      statements:
+      - Effect: Allow
+        Action:
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+        Resource: "*"
+  environment:
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY, ""}
+    OPENAI_API_BASE_URL: ${env:OPENAI_API_BASE_URL, "https://api.openai.com/v1"}
+    INTEREST_RATE: ${env:INTEREST_RATE, "0.1"}
+    POWERTOOLS_SERVICE_NAME: ${env:POWERTOOLS_SERVICE_NAME, "kavak-agent"}
+    POWERTOOLS_METRICS_NAMESPACE: ${env:POWERTOOLS_METRICS_NAMESPACE, "kavak-agent"}
+    LOG_LEVEL: ${env:LOG_LEVEL, "INFO"}
+    POWERTOOLS_TRACE_DISABLED: ${env:POWERTOOLS_TRACE_DISABLED, "false"}
+    TWILIO_ACCOUNT_SID: ${env:TWILIO_ACCOUNT_SID, ""}
+    TWILIO_AUTH_TOKEN: ${env:TWILIO_AUTH_TOKEN, ""}
+    TWILIO_WHATSAPP_NUMBER: ${env:TWILIO_WHATSAPP_NUMBER, ""}
+
+functions:
+  # Función única que maneja todos los transportes (API REST y Twilio)
+  # El router detecta automáticamente el tipo de transporte basándose en el path y headers
+  agent:
+    handler: src/transport/lambda_handler.handler
+    layers:
+    - ${self:custom.powertoolsLayerArn}
+    - { Ref: PythonRequirementsLambdaLayer } # Layer con dependencias Python
+    alarms:
+    - functionErrors
+    - functionThrottles
+    events:
+    # Endpoint para API REST (JSON)
+    - httpApi:
+        path: /agent
+        method: post
+        cors:
+          allowedOrigins:
+          - "*"
+          allowedHeaders:
+          - Content-Type
+          - Authorization
+          allowedMethods:
+          - POST
+          - OPTIONS
+    # Endpoint para webhooks de Twilio WhatsApp (form-encoded)
+    - httpApi:
+        path: /twilio/webhook
+        method: post
+
+custom:
+  powertoolsLayerArn: arn:aws:lambda:us-east-1:017000801446:layer:AWSLambdaPowertoolsPythonV3-python312-x86_64:19
+  pythonRequirements:
+    fileName: requirements-lambda.txt
+    layer: true
+    layerName: kavak-agent-deps
+    zip: true
+    dockerizePip: true
+  alerts:
+    dashboards: true
+    topics:
+      alarm:
+        topic: ${env:ALERTS_TOPIC_ARN, ""}
+    definitions:
+      functionErrors:
+        description: "Lambda errors > 0"
+        threshold: 1
+        statistic: Sum
+        period: 300
+        evaluationPeriods: 1
+        comparisonOperator: GreaterThanOrEqualToThreshold
+        treatMissingData: notBreaching
+      functionThrottles:
+        description: "Lambda throttles > 0"
+        threshold: 1
+        statistic: Sum
+        period: 300
+        evaluationPeriods: 1
+        comparisonOperator: GreaterThanOrEqualToThreshold
+        treatMissingData: notBreaching
+
+plugins:
+- serverless-plugin-aws-alerts
+- serverless-python-requirements
+
+package:
+  patterns:
+  - src/**
+  # Excluir archivos innecesarios
+  - "!node_modules/**"
+  - "!.venv/**"
+  - "!tests/**"
+  - "!.git/**"
+  - "!serverless.yml"
+  - "!README.md"
+  - "!*.pyc"
+  - "!__pycache__/**"
+  - "!package.json"
+  - "!package-lock.json"
+  - "!*.zip"
+  - "!*.env"
+  - "!*.serverless"
+  - "!layers/**"
+  - "!python/**"
+  - "!pyproject.toml"
+  - "!uv.lock"
+  - "!pytest.ini"
+  - "!requirements-lambda.txt"
+  - "!layer.zip"
