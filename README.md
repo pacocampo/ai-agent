@@ -4,6 +4,8 @@ Kavak AI Commercial Agent
 Bot comercial impulsado por LLMs para simular a un asesor de Kavak. Responde
 preguntas sobre Kavak, recomienda autos del catalogo y calcula financiamiento.
 
+Arquitectura: Ver [ADR.md](ADR.md) para documentación detallada de decisiones arquitectónicas. 
+
 Quickstart
 ----------
 1) Crear un entorno y variables de entorno:
