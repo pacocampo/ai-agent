@@ -83,3 +83,5 @@ cython_debug/
 # Project specific
 *.zip
 uv.lock
+
+.github/
